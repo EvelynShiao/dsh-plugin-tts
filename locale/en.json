@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Edge TTS",
+    "description": "Edge TTS voice integration: per-message speak button, auto-read toggle, and a voice settings panel (Edge TTS / RVC / Index-TTS2 / CosyVoice / Google Cloud TTS)."
+  }
+}
