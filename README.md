@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="dsh-plugin-tts" width="140" />
+  <img src="https://raw.githubusercontent.com/1624318455/dsh-plugin-tts/main/logo.png" alt="dsh-plugin-tts" width="140" />
 </p>
 
 <h1 align="center">dsh-plugin-tts</h1>
@@ -20,18 +20,20 @@
 - **[RVC Custom Voice Guide](docs/RVC-GUIDE.md)** — custom voices · chunked progressive playback · compact index · voice packs · portable runtime
 - **[Index-TTS2 Guide](docs/INDEX-TTS2-GUIDE.md)** — local reference-audio voices
 - **[CosyVoice Guide](docs/COSYVOICE-GUIDE.md)** — local zero-shot prompt cloning (CosyVoice-2.0-0.5B)
+- **[GPT-SoVITS Guide](docs/GPT-SOVITS-GUIDE.md)** — direct local `api_v2.py /tts` · reference-audio cloning · native payload contract
 - **[Cloud TTS Guide](docs/CLOUD-GUIDE.md)** — paid Google voices · API key · usage & billing caliber
 - **[Edge TTS Guide](docs/EDGE-GUIDE.md)** — default online reading
-- **[Adaptive chunked playback design](docs/adaptive-chunked-playback.md)** — how gapless long reads work
+- **[Adaptive chunked playback design](https://github.com/1624318455/dsh-plugin-tts/blob/main/docs/adaptive-chunked-playback.md)** — how gapless long reads work (source repo only)
 
 ---
 
-# dsh-plugin-tts — Edge TTS + RVC / Index-TTS2 / CosyVoice / Cloud voices for DeepSeek Harness
+# dsh-plugin-tts — Edge TTS + RVC / Index-TTS2 / CosyVoice / GPT-SoVITS / Cloud voices for DeepSeek Harness
 
 A dual-sided (Host + Web UI) DeepSeek Harness plugin that reads assistant replies
 aloud — Microsoft Edge's free online TTS out of the box, **your own RVC voice
 models** for custom voices, **local Index-TTS2 reference-audio voices**,
-**local CosyVoice zero-shot prompt clones** (CosyVoice-2.0-0.5B), or
+**local CosyVoice zero-shot prompt clones** (CosyVoice-2.0-0.5B),
+**local GPT-SoVITS reference-audio clones**, or
 **paid Google Cloud TTS voices** (Chinese Standard/Wavenet). Long replies stream
 with **gapless adaptive chunked playback**; voices install **one-click from a
 voice-pack registry**; a **portable RVC runtime** means no RVC WebUI install is needed.
@@ -50,8 +52,7 @@ voice-pack registry**; a **portable RVC runtime** means no RVC WebUI install is 
    read aloud automatically (the toggle gets a circular highlight); when off,
    nothing is auto-read.
 3. **Voice settings panel** under 设置 → 插件 → 语音:
-    - **TTS provider**: Edge TTS (free, no API key) / custom RVC voice /
-      local Index-TTS2 voice / local CosyVoice clone / Google Cloud TTS (paid, API key)
+    - **TTS provider**: Edge TTS / RVC / IndexTTS-2 / CosyVoice2.0 / Cloud TTS / GPT-SoVITS
     - **Voice**: 22 live-verified Edge TTS voices (default 晓萱 zh-CN-XiaoxuanNeural);
       8 Cloud voices in the cmn-CN group (default cmn-CN-Wavenet-A, free-form id allowed)
     - **Sound tuning**: rate / pitch / volume (0 = default, shared by Edge & Cloud)
@@ -66,6 +67,7 @@ voice-pack registry**; a **portable RVC runtime** means no RVC WebUI install is 
     - **Cloud config**: API Key (Host-file-only, write-only input) + Project ID (optional) +
       test button + this month's local usage per tier (Standard 4M / Wavenet-Neural2-Chirp3 1M) —
       see the [Cloud Guide](docs/CLOUD-GUIDE.md)
+   - **GPT-SoVITS config**: service URL (default 9880, Host-file-only) + reference audio (required) + prompt transcript / language + text language + media type + speed + split method + advanced params (a collapsed panel, one control per knob) + "Test one line"; **no API key, no gateway** — see the [GPT-SoVITS Guide](docs/GPT-SOVITS-GUIDE.md)
    - **Voice packs**: one-click install of voices from a registry
    - **Preview**: type text and press the play (triangle) button — a spinning
      loader shows while it is synthesizing/playing (click again to stop),
@@ -75,7 +77,7 @@ voice-pack registry**; a **portable RVC runtime** means no RVC WebUI install is 
    [RVC guide](docs/RVC-GUIDE.md)).
 5. **Gapless long reads**: adaptive chunked progressive playback — probe-calibrated
    chunk size, play-while-converting, Web Audio sample-accurate joins, no gaps
-   between chunks (see the [design doc](docs/adaptive-chunked-playback.md)).
+   between chunks (see the [design doc](https://github.com/1624318455/dsh-plugin-tts/blob/main/docs/adaptive-chunked-playback.md)).
 6. **Mini player** while reading: pause / resume + playback speed (1x / 1.25x /
    1.5x) on the message's action row; chunked long reads surface a visible
    "chunk x/y" counter.
@@ -121,6 +123,9 @@ voice-pack registry**; a **portable RVC runtime** means no RVC WebUI install is 
   - **CosyVoice clones**: the local CosyVoice-2.0-0.5B bundle's `cosy-server.py`
     (`启动cosy服务.bat`, default port 7890) — see the
     [CosyVoice Guide](docs/COSYVOICE-GUIDE.md).
+  - **GPT-SoVITS clones**: the local bundle's `api_v2.py` (default port 9880; the
+    Gradio WebUI is **not** an HTTP API) — see the
+    [GPT-SoVITS Guide](docs/GPT-SOVITS-GUIDE.md).
 
 ## Install
 
@@ -158,7 +163,7 @@ duplicates (it rolls back instead of overwriting).
 
 | Layer | Location | Role |
 |---|---|---|
-| Host | `lib/index.mjs` | Registers webServer routes: `/dsh-tts-api/speak` (synthesis / chunk queue, all providers), `/dsh-tts-audio/<id>` (audio bytes), `/dsh-tts-api/rvc-next` (next chunk / job cancel), `/dsh-tts-api/rvc-files` + `/rvc-compact-index` + `/rvc-packs*` (RVC service proxy / packs), `/dsh-tts-api/index-*` and `/dsh-tts-api/cosy-*` (local service proxy + config), `/dsh-tts-api/cloud-*` (Cloud key/usage/test), `/dsh-tts-api/notify` (approval-alert queue), `/dsh-tts-api/diagnose` (one-click diagnostics); runs a zero-dependency Edge worker via `node -e` |
+| Host | `lib/index.mjs` | Registers webServer routes: `/dsh-tts-api/speak` (synthesis / chunk queue, all providers), `/dsh-tts-audio/<id>` (audio bytes), `/dsh-tts-api/rvc-next` (next chunk / job cancel), `/dsh-tts-api/rvc-files` + `/rvc-compact-index` + `/rvc-packs*` (RVC service proxy / packs), `/dsh-tts-api/index-*` and `/dsh-tts-api/cosy-*` (local service proxy + config), `/dsh-tts-api/cloud-*` (Cloud key/usage/test), `/dsh-tts-api/gsv-*` (GPT-SoVITS config/test), `/dsh-tts-api/notify` (approval-alert queue), `/dsh-tts-api/diagnose` (one-click diagnostics); runs a zero-dependency Edge worker via `node -e` |
 | Client | `lib/client.js` | Web Audio chunk player (sample-accurate joins, `<audio>` fallback) in `shell.overlay` + the UI entries (read-aloud button / auto-read toggle / settings panel); talks to the Host through `fetch` |
 
 The TTS worker mirrors [node-edge-tts@1.2.10](https://github.com/SchneeHertz/node-edge-tts):
@@ -200,6 +205,13 @@ derived from the voice locale, one retry on abnormal (1006) closures. Audio is
   the client polls `/dsh-tts-api/notify?s=N` — the first poll baseline-syncs the
   cursor so a page refresh never replays stale alerts; announcements are silent
   on failure (no error toasts while the agent loops).
+- **Archiving the session being read stops the read.** Archiving removes the
+  session from the sidebar workspace list, so keeping the audio running would
+  speak for a conversation the user can no longer see or reach. A root-scoped
+  guard watches the Host's archive set and stops the read (and pauses the audio)
+  the moment the session being read is archived; a new read for an
+  already-archived session is refused instead of starting. Session-less reads
+  (settings preview, selection read, approval alerts) are never affected.
 
 ## Settings persistence
 
@@ -220,10 +232,10 @@ Layered storage:
 A "Reset to defaults" button in the settings panel restores defaults and clears
 both layers (best-effort on the Host file).
 
-## Custom voice (RVC)
+## RVC
 
 Use your locally trained **RVC model** for voice conversion: switch the TTS
-provider to "自定义音色（RVC）" in the settings panel. **First-time RVC users
+provider to "RVC" in the settings panel. **First-time RVC users
 need two things**: a model file (`.pth`) and a running local RVC service — see
 the [RVC Guide](docs/RVC-GUIDE.md) or [User Guide](docs/USER-GUIDE.md) §4.2 for
 macOS/Windows/Linux startup commands. The full story — service startup, panel
@@ -258,7 +270,7 @@ portable runtime, settings reference and troubleshooting — lives in the
   | Windows (CPU-minimal) | ~1–2 GB | ~2–3 GB |
   | Windows (with NVIDIA GPU) | ~6 GB | ~7 GB |
 - These are self-contained runtimes; the **full RVC WebUI is 7.8 GB** — we don't ship the WebUI / training / realtime parts this plugin doesn't need.
-- Index-TTS2 / CosyVoice also ship as local bundles (sizes vary by release — see the [Index-TTS2 Guide](docs/INDEX-TTS2-GUIDE.md) / [CosyVoice Guide](docs/COSYVOICE-GUIDE.md) preparation sections).
+- Index-TTS2 / CosyVoice / GPT-SoVITS also ship as local bundles (sizes vary by release — see the [Index-TTS2 Guide](docs/INDEX-TTS2-GUIDE.md) / [CosyVoice Guide](docs/COSYVOICE-GUIDE.md) / [GPT-SoVITS Guide](docs/GPT-SOVITS-GUIDE.md) preparation sections).
 
 **Q: Are the dependencies big?**
 - The runtime is heavy but **you don't install anything**: the portable package bundles Python, ffmpeg (Windows) / PyAV (macOS), and all inference deps. Unzip and run — no compile, no env setup.
@@ -267,17 +279,18 @@ portable runtime, settings reference and troubleshooting — lives in the
 **Q: Do I need a local TTS model?**
 - With the default Edge TTS or Cloud TTS: **no** — they synthesize online.
 - With custom voices (RVC): you need **your own** RVC voice model (`.pth`), optionally a `.index`; the pretrained hubert / rmvpe are already bundled — you only provide your trained model.
-- With Index-TTS2 / CosyVoice: no training needed — you provide **reference/prompt audio** (a few seconds of clear speech) to the local bundle and pick it in the panel; see the [Index-TTS2 Guide](docs/INDEX-TTS2-GUIDE.md) and [CosyVoice Guide](docs/COSYVOICE-GUIDE.md).
+- With Index-TTS2 / CosyVoice / GPT-SoVITS: no training needed — you provide **reference/prompt audio** (a few seconds of clear speech) and point the panel at it; see the [Index-TTS2 Guide](docs/INDEX-TTS2-GUIDE.md), [CosyVoice Guide](docs/COSYVOICE-GUIDE.md) and [GPT-SoVITS Guide](docs/GPT-SOVITS-GUIDE.md).
 
 **Q: Is it easy to install?**
 - Install the plugin normally, then for RVC: download the portable package for your platform → unzip → run the launcher (double-click `.command` on macOS, `.bat` on Windows) → drop your `.pth` into `assets/weights` → pick it in the plugin panel.
-- Index-TTS2 / CosyVoice follow the same three steps (bundle → keep its service running → pick a voice in the panel); Cloud TTS only needs an API key pasted into settings. Each provider guide walks through it.
+- Index-TTS2 / CosyVoice / GPT-SoVITS follow the same three steps (bundle → keep its service running → set the reference audio in the panel); Cloud TTS only needs an API key pasted into settings. Each provider guide walks through it.
 - No compile, no manual Python/ffmpeg install. Note: **the first macOS launch is slow (tens of seconds)** while macOS scans the extracted runtimes (one-time); later launches take a few seconds.
 
 **Q: Do I need a paid API?**
-- No for Edge TTS (free, no API key) and RVC / Index-TTS2 / CosyVoice (fully
-  local and free — but each needs its local service package running, see
-  Requirements above).
+- No for Edge TTS (free, no API key) and RVC / Index-TTS2 / CosyVoice /
+  GPT-SoVITS (fully local and free — but each needs its local service package
+  running, see Requirements above). GPT-SoVITS in particular needs **no**
+  OpenAI or third-party API key.
 - Google Cloud TTS is pay-as-you-go and needs your own API key: Chinese
   Standard voices are free for the first 4M chars/month, Wavenet/Neural2/Chirp
   for the first 1M chars/month (local counters; Google Cloud Billing is
@@ -303,12 +316,77 @@ The settings panel has an **Interface language** selector at the top:
 - Covers the whole settings panel, bubble/read-aloud buttons, diagnostics,
   voice-pack panel, plus RVC service errors/progress hints.
 
+## UI and design language
+
+Every control is transcribed from the shell's own `Button` / `Input` / `Menu` /
+`Switch` / `PermissionPresets` / `AgentPreset` / `SettingsGeneral` sources rather
+than copied from screenshots.
+
+**Two picker shapes — and two different shell locations.** The same npm package
+ships two things called a picker: on a settings row it is `PermissionRow`'s
+`.oY77xG_selector` — 36px tall, `--dsw-radius-md`, **no border but a default
+`--dsw-alias-bg-module-platform` light-grey fill** (`rgb(245,246,247)` in the
+light theme), 14px/400 primary ink, `padding 0 14px`, a 12px label/chevron gap,
+`interactive-bg-hover` on hover; `:disabled` only changes the cursor and keeps
+the fill. The transparent 28px `PermissionSelect.trigger` / `AgentPresetSeat` is
+the composer's *current-session* control and has no place in our panel. Only
+inside a form field does a picker become a *field*: the same box as the `Input`
+beside it (32px, `--dsw-radius-md`, 0.5px `border-l4`, `bg-layer-1`), with the
+selector's 12px gap reset to 4px. The menu surface is the shell's own material —
+`--dsw-menu-surface-fill`, `blur(40px) saturate(150%)`,
+`--dsw-elevation-prominent`, 12px rows and a trailing check — and on a settings
+row it opens with the shell's `align:"end"`, growing left from the trigger's
+right edge so long labels never spill out of the dialog. `Esc` / click-outside /
+`↑↓` + `Enter` are supported, with automatic flip-up when space runs out.
+
+**Row rhythm** follows the settings page: `padding:16px 0`, a half-pixel
+`border-l2` rule, `gap:24px`, 14/20 titles and 12/18 secondary descriptions; a
+module that opens a group takes the 16/24/500 section tier. A row immediately
+followed by a bordered provider card drops its bottom rule (the two strokes
+would land on the same pixel and read as a broken line); two stacked cards keep
+both borders and are separated by a 12px gap.
+
+**Three button variants only.** `Button.sm` (28px, `radius-sm`, 0.5px
+`border-l3`, 12/18), icon buttons (28×28, `radius-sm`, `button-primary-fill`) and
+disabled at `opacity .4`. Where a row also holds an input, every child adopts the
+32px field height so the row keeps a single baseline.
+
+**Booleans** use a 36 × 20 switch matching `Switch.module.css` byte for byte,
+including `box-sizing:border-box` and `corner-shape:round` (which opts the capsule
+out of the shell's global superellipse — without it a 999px radius renders as a
+squircle) rather than a native checkbox — the OS-drawn square is the one control
+that can never blend into the product's language.
+
+**Toasts** use the shell's dark surface (`toast-bg`, `toast-label`,
+`--dsw-shadow-lv3`, `radius-lg`, `padding 12px 16px`) with no border; state rides
+a leading dot.
+
+Required fields carry a single red `*` and nothing else is badged — the "mark the
+minority" convention from GOV.UK and USWDS. Diagnostics render as a hairline list:
+state glyph + name + right-aligned state, with the actionable hint on a second
+line; skipped checks stay grey instead of crying red.
+
+The stylesheet is one `+`-joined literal, so a stray quote silently truncates it
+while `node --check` still passes; `tests/client-load.mjs` therefore runs the real
+injection and asserts on the resulting `<style>` length and brace balance.
+
 ## Development
 
 ```sh
 node tests/smoke.mjs   # fake-ctx route registration + real Edge TTS synthesis + audio serve assertions
-npm run test:all       # full: smoke + live + patch + i18n + client-load
+npm run test:all       # full: smoke/live/patch/i18n/client/archive/gsv/gsv-e2e/pack/privacy
+npm run test:pack      # guard on what npm install actually ships to users
+npm run test:privacy   # guard against local usernames/paths, GUI captures, credentials
 ```
+
+Tests only run from the source repo. The published package is trimmed by the
+`files` allowlist in `package.json`: it contains `lib/`, `rvc-server.py`,
+`cordis.patch.yml` and the user-facing docs. Only the seven user-facing guides
+under `docs/` ship; design notes, UI audit records and acceptance checklists
+stay in the source repo, with README links pointing online. GPT-SoVITS talks
+straight to the local `api_v2.py` — **no gateway process, no Python adapter,
+no API key**. `tests/`, CI config and maintainer-only tools under `tools/`
+are excluded; `test:pack` enforces that boundary.
 
 Hot-reload after editing `lib/` (on Windows a `file:` install is a COPY, not a
 symlink, so the running dsh reads the profile copy):
